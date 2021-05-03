@@ -27,8 +27,10 @@ library
   hs-source-dirs:      src
   build-depends:       relude                     > 1.0 && < 1.1
                      , aeson                      < 1.6
+                     , streaming                  < 0.3
                      , http-client                < 0.8
                      , http-client-tls            < 0.4
                      , time                       < 1.12
                      , morpheus-graphql-client    ^>= 0.17
   exposed-modules:     Lentille.GitHubQuery
+                     , Lentille.GitHub.Favorites

@@ -24,9 +24,12 @@ module Lentille.GitHubQuery where
 
 import qualified Data.ByteString.Lazy as LBS
 import Data.Morpheus.Client
+import qualified Lentille.GitHub.Favorites as GF
 import Network.HTTP.Client (Manager, RequestBody (RequestBodyLBS), httpLbs, method, newManager, parseRequest_, requestBody, requestHeaders, responseBody)
 import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Relude
+import Streaming (Of, Stream)
+import qualified Streaming.Prelude as S
 
 newtype DateTime = DateTime Text deriving (Show, Eq, EncodeScalar, DecodeScalar)
 
@@ -106,3 +109,36 @@ runGithubGraphRequest (GitHubGraphClient manager url token) jsonBody = do
 
 fetchIssues :: MonadIO m => GitHubGraphClient -> GetIssuesArgs -> m (Either String GetIssues)
 fetchIssues client = fetch (runGithubGraphRequest client)
+
+getFavorites :: MonadIO m => GitHubGraphClient -> GF.GetFavoritesArgs -> m (Either String GF.GetFavorites)
+getFavorites client = fetch (runGithubGraphRequest client)
+
+getFavoritesStream ::
+  MonadIO m =>
+  GitHubGraphClient ->
+  Text ->
+  Stream (Of GF.UserStarredRepositoriesEdgesNodeRepository) m ()
+getFavoritesStream client username = go "" 3
+  where
+    go :: MonadIO m => Text -> Int -> Stream (Of GF.UserStarredRepositoriesEdgesNodeRepository) m ()
+    go _ 0 = putTextLn "Over!"
+    go cursor max = do
+      respE <- getFavorites client (GF.GetFavoritesArgs (toString username) (toString cursor))
+      (totalCount, hasNextPage, endCursor, favs) <- case respE of
+        Left err -> error (toText err)
+        Right
+          ( GF.GetFavorites
+              ( Just
+                  ( GF.UserUser
+                      ( GF.UserStarredRepositoriesStarredRepositoryConnection
+                          totalCount
+                          (GF.UserStarredRepositoriesPageInfoPageInfo hasNextPage endCursor)
+                          (Just xs)
+                        )
+                    )
+                )
+            ) -> pure (totalCount, hasNextPage, endCursor, map getNode $ catMaybes xs)
+      putTextLn $ "Got " <> show totalCount <> " has next " <> show hasNextPage
+      S.each favs
+      go (fromMaybe (error "No endcursor?") endCursor) (max - 1)
+    getNode (GF.UserStarredRepositoriesEdgesStarredRepositoryEdge node) = node
