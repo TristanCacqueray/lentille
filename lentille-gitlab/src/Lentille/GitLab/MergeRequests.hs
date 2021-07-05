@@ -23,6 +23,7 @@ import Data.Time.Clock
 import Data.Time.Format (defaultTimeLocale, formatTime, parseTimeOrError)
 import qualified Data.Vector as V
 import qualified Google.Protobuf.Timestamp as T
+import Lentille (LentilleStream)
 import Lentille.GitLab
   ( GitLabGraphClient,
     PageInfo (..),
@@ -124,8 +125,7 @@ fetchMergeRequest :: MonadIO m => GitLabGraphClient -> Text -> String -> m (Eith
 fetchMergeRequest client project mrID =
   fetch (runGitLabGraphRequest client) (GetProjectMergeRequestsArgs (ID project) (Just [mrID]) Nothing)
 
-streamMergeRequests ::
-  MonadIO m => GitLabGraphClient -> UTCTime -> Text -> Stream (Of Changes) m ()
+streamMergeRequests :: GitLabGraphClient -> UTCTime -> Text -> LentilleStream Changes
 streamMergeRequests client untilDate project =
   streamFetch client (Just untilDate) mkArgs (transformResponse $ host client) breakOnDate
   where

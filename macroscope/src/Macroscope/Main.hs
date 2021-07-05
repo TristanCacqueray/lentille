@@ -77,8 +77,8 @@ runMacroscope verbose confPath interval client = do
       -- TODO: handle exceptions
       traverse_ runner docStreams
 
-    glMRCrawler :: MonadIO m => GitLabGraphClient -> DocumentStream m
+    glMRCrawler :: GitLabGraphClient -> DocumentStream
     glMRCrawler glClient = Changes $ streamMergeRequests glClient
 
-    glOrgCrawler :: MonadIO m => GitLabGraphClient -> DocumentStream m
+    glOrgCrawler :: GitLabGraphClient -> DocumentStream
     glOrgCrawler glClient = Projects $ streamGroupProjects glClient
